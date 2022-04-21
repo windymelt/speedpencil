@@ -142,8 +142,10 @@ object Frontend {
   }
   def pushTimerTick(): Unit = {
     if (drawClockTimerEnabled) {
-      pushBlocks(drawCtx)
-      drawCtx = drawCtx.copy(poisoningMap = collection.mutable.Map())
+      if (drawCtx.poisoningMap.keys.size > 50) {
+        pushBlocks(drawCtx)
+        drawCtx = drawCtx.copy(poisoningMap = collection.mutable.Map())
+      }
       dom.window.setTimeout(() => pushTimerTick(), 1000 /* millisec */)
     }
   }
@@ -151,6 +153,7 @@ object Frontend {
     drawClockTimerEnabled = false
     ctx.stroke()
     pushBlocks(drawCtx)
+    drawCtx = drawCtx.copy(poisoningMap = collection.mutable.Map())
   }
   val b64encoder = java.util.Base64.getEncoder()
   var pushBuffer: Array[Byte] = Array.fill(4 * Protocol.blockSize * Protocol.blockSize)(255.toByte)

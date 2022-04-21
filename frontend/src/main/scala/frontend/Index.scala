@@ -15,12 +15,13 @@ object Frontend {
     println("hello, javascript and browser!")
 
     val canvas = dom.document.getElementById("canvas").asInstanceOf[HTMLCanvasElement]
-    println(canvas)
     ctx = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
     ctx.fillStyle = "rgb(255,255,255)"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     blockBuffer = ctx.createImageData(blockSize, blockSize)
     ctx.fillText("Hello world from scala.js!", 320, 240)
+
+    ctx.strokeStyle = "rgba(0, 128, 128, 200)"
 
     // ctx.strokeStyle = "rgb(200,200,200)"
     // for {
@@ -142,6 +143,7 @@ object Frontend {
   def pushTimerTick(): Unit = {
     if (drawClockTimerEnabled) {
       pushBlocks(drawCtx)
+      drawCtx = drawCtx.copy(poisoningMap = collection.mutable.Map())
       dom.window.setTimeout(() => pushTimerTick(), 1000 /* millisec */)
     }
   }

@@ -21,20 +21,23 @@ object Frontend {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     blockBuffer = ctx.createImageData(blockSize, blockSize)
     ctx.fillText("Hello world from scala.js!", 320, 240)
-    for {
-      x <- 0 to canvas.width by blockSize
-    } yield {
-      ctx.moveTo(x, 0)
-      ctx.lineTo(x, canvas.height)
-      ctx.stroke()
-    }
-    for {
-      y <- 0 to canvas.height by blockSize
-    } yield {
-      ctx.moveTo(0, y)
-      ctx.lineTo(canvas.width, y)
-      ctx.stroke()
-    }
+
+    // ctx.strokeStyle = "rgb(200,200,200)"
+    // for {
+    //   x <- 0 to canvas.width by blockSize
+    // } yield {
+    //   ctx.moveTo(x, 0)
+    //   ctx.lineTo(x, canvas.height)
+    //   ctx.stroke()
+    // }
+    // for {
+    //   y <- 0 to canvas.height by blockSize
+    // } yield {
+    //   ctx.moveTo(0, y)
+    //   ctx.lineTo(canvas.width, y)
+    //   ctx.stroke()
+    // }
+    // ctx.strokeStyle = "rgb(0,0,0)"
 
     ws = Ws.newWebSocket()
     ws.onmessage = getBlock(ctx)
@@ -64,10 +67,6 @@ object Frontend {
     ctx: CanvasRenderingContext2D,
     lastMouseX: Double,
     lastMouseY: Double,
-    minMouseX: Double,
-    maxMouseX: Double,
-    minMouseY: Double,
-    maxMouseY: Double,
     poisoningMap: collection.mutable.Map[(Int, Int), Boolean]
   )
 
@@ -120,8 +119,9 @@ object Frontend {
   def startDrawClockTimer(): Unit = {
     drawClockTimerEnabled = true
     ctx.beginPath()
-    drawCtx = Ctx(ctx, mouseX, mouseY, mouseX, mouseX, mouseY, mouseY, collection.mutable.Map())
+    drawCtx = Ctx(ctx, mouseX, mouseY, collection.mutable.Map())
     drawClockTimerTick()
+    pushTimerTick()
   }
   def drawClockTimerTick(): Unit = {
     drawCtx.ctx.stroke()
@@ -129,20 +129,20 @@ object Frontend {
     drawCtx.ctx.lineTo(mouseX, mouseY)
 
     if (drawClockTimerEnabled) {
-      // pushBlocks(drawCtx)
       for (nm <- calcPoisoningMap(drawCtx.lastMouseX, drawCtx.lastMouseY, mouseX, mouseY)) {
         drawCtx.poisoningMap.update(nm, true)
       }
       drawCtx = drawCtx.copy(
         lastMouseX = mouseX,
         lastMouseY = mouseY,
-        minMouseX = math.min(drawCtx.minMouseX, mouseX),
-        maxMouseX = math.max(drawCtx.maxMouseX, mouseX),
-        minMouseY = math.min(drawCtx.minMouseY, mouseY),
-        maxMouseY = math.max(drawCtx.maxMouseY, mouseY),
       )
-      // drawCtx = drawCtx.copy(ctx, mouseX, mouseY, mouseX, mouseX, mouseY, mouseY)
       dom.window.setTimeout(() => drawClockTimerTick(), 10 /* millisec */)
+    }
+  }
+  def pushTimerTick(): Unit = {
+    if (drawClockTimerEnabled) {
+      pushBlocks(drawCtx)
+      dom.window.setTimeout(() => pushTimerTick(), 1000 /* millisec */)
     }
   }
   def stopDrawClockTimer(): Unit = {
@@ -151,13 +151,14 @@ object Frontend {
     pushBlocks(drawCtx)
   }
   val b64encoder = java.util.Base64.getEncoder()
+  var pushBuffer: Array[Byte] = Array.fill(4 * Protocol.blockSize * Protocol.blockSize)(255.toByte)
   def pushBlocks(ctx: Ctx): Unit = {
     for { nm <- ctx.poisoningMap.keys } yield {
       import io.circe.syntax._
       import Protocol._
       val (n, m) = nm
-      val block: Array[Byte] = ctx.ctx.getImageData(n * blockSizeD, m * blockSizeD, blockSizeD, blockSizeD).data.map(_.toByte).toArray
-      val msg = Protocol.PushBlock(n, m, b64encoder.encodeToString(block)).asJson.noSpaces
+      pushBuffer = ctx.ctx.getImageData(n * blockSizeD, m * blockSizeD, blockSizeD, blockSizeD).data.map(_.toByte).toArray
+      val msg = Protocol.PushBlock(n, m, b64encoder.encodeToString(pushBuffer)).asJson.noSpaces
       ws.send(msg.toString())
     }
   }
@@ -170,8 +171,6 @@ object Frontend {
     import Protocol._
     decode[PushBlock](msg.data.asInstanceOf[String]) match {
       case Right(pushBlock: PushBlock) => {
-        import scala.scalajs.js
-        import js.JSConverters._
         val block = b64decoder.decode(pushBlock.block)
         val data = block.map(java.lang.Byte.toUnsignedInt)
         for (i <- 0 until blockBuffer.data.length) {

@@ -3,7 +3,9 @@ package shared
 import io.circe._, io.circe.generic.semiauto._
 
 object Protocol {
-  val blockSize = 16
+  val blockSize = 8
+  val canvasWidth = 1920
+  val canvasHeight = 1080
   sealed trait Message {
     val messageType: String
   }

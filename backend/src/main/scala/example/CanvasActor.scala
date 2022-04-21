@@ -2,34 +2,31 @@ package example
 
 import akka.actor.Actor
 import shared.Protocol
-import collection.mutable.{Map, Seq}
 import akka.actor.ActorRef
 
 class CanvasActor extends Actor {
-  val bufferSize = shared.Protocol.blockSize * shared.Protocol.blockSize * 4
-  def genCell() = Array.fill(bufferSize)(255)
-  var buffers = Map[Int, Map[Int, Array[Int]]]()
+  val cellSize = shared.Protocol.blockSize * shared.Protocol.blockSize * 4
+  def genCell() = Array.fill(cellSize)(255)
+  def getCellIdx(n: Int, m: Int): Int = n * bufferHeightCount + m
+  val bufferWidthCount = (Protocol.canvasWidth / Protocol.blockSize)
+  val bufferHeightCount = (Protocol.canvasHeight / Protocol.blockSize)
+  var buffers = Array.fill(bufferWidthCount * bufferHeightCount)(genCell())
   var subscribers = Seq[ActorRef]()
   var checkBuffer = genCell()
   val b64decoder = java.util.Base64.getDecoder()
   val b64encoder = java.util.Base64.getEncoder()
-  def receive = {
+  def receive: PartialFunction[Any,Unit] = {
     case Connected(a) => subscribers ++= Seq(a)
     // case Disconnected(a) => subscribers = subscribers.filterNot(_ == a)
-    case Protocol.PushBlock(n, m, block) => {
-      if (! buffers.isDefinedAt(n)) {
-        buffers(n) = Map()
-      }
-      if (! buffers(n).isDefinedAt(m)) {
-        buffers(n)(m) = genCell()
-      }
-      buffers(n)(m) = buffers(n)(m) multiply b64decoder.decode(block).map(java.lang.Byte.toUnsignedInt)
-      if (! buffers(n)(m).isEqual(checkBuffer)) {
+    case Protocol.PushBlock(n, m, block) if n >= 0 && m >= 0 && n < bufferWidthCount && m < bufferHeightCount => {
+      val idx = getCellIdx(n, m)
+      buffers(idx) = buffers(idx) multiply b64decoder.decode(block).map(java.lang.Byte.toUnsignedInt)
+      if (! buffers(idx).isEqual(checkBuffer)) {
+        val byteBuffer = buffers(idx).map(_.toByte)
         subscribers foreach { a =>
-          val byteBuffer = buffers(n)(m).map(_.toByte)
           a ! Protocol.PushBlock(n, m, b64encoder.encodeToString(byteBuffer))
-          buffers(n)(m).copyToArray(checkBuffer)
         }
+        buffers(idx).copyToArray(checkBuffer)
       }
     }
     case _ => // ignore

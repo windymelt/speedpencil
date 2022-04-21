@@ -44,6 +44,7 @@ class Webservice(implicit system: ActorSystem) extends Directives {
       }
 
     val incoming = Flow[Message]
+      .buffer(65535, OverflowStrategy.dropNew)
       .collect {
         case m @ TextMessage.Strict(msg) => {
           import io.circe.parser._

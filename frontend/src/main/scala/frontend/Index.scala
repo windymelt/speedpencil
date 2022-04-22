@@ -43,6 +43,7 @@ object Frontend {
 
     ws = Ws.newWebSocket()
     ws.onmessage = getBlock(ctx)
+    ws.onclose = onConnectionClosed()
 
     ctx.lineWidth = 5;
     canvas.addEventListener("mousedown", (ev: MouseEvent) => onMouseDown(ev))
@@ -211,5 +212,9 @@ object Frontend {
         doClear(canvas)
       }
     }
+  }
+
+  def onConnectionClosed() = (msg: CloseEvent) => {
+    dom.window.alert("Connection closed unexpectedly. Please Reload.")
   }
 }

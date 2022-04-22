@@ -83,6 +83,22 @@ object Frontend {
       "click",
       (ev: MouseEvent) => { ctx.strokeStyle = "rgb(255, 128, 0)" }
     )
+
+    val bold = dom.document
+      .getElementById("bold")
+      .asInstanceOf[HTMLButtonElement]
+    bold.addEventListener(
+      "click",
+      (ev: MouseEvent) => { ctx.lineWidth = 5 }
+    )
+
+    val light = dom.document
+      .getElementById("light")
+      .asInstanceOf[HTMLButtonElement]
+    light.addEventListener(
+      "click",
+      (ev: MouseEvent) => { ctx.lineWidth = 2 }
+    )
   }
 
   def initializeWs(): Unit = {

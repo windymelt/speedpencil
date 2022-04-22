@@ -3,7 +3,7 @@ package example
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.{Directives, Route}
 import akka.stream.scaladsl.{Source, Flow, Sink}
-import akka.http.scaladsl.model.ws.{ Message, TextMessage }
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.actor.Props
 import akka.stream.OverflowStrategy
 import akka.actor.PoisonPill
@@ -17,27 +17,31 @@ class Webservice(implicit system: ActorSystem) extends Directives {
 
   val route: Route = get {
     pathSingleSlash {
-        getFromResource("web/index.html")
-      }
-  } ~
-  path("frontend-launcher.js")(getFromResource("frontend-launcher.js")) ~
-  path("frontend-fastopt.js")(getFromResource("frontend-fastopt.js")) ~
-  path("chat") {
-    encodeResponseWith(NoCoding, Gzip) {
-      handleWebSocketMessages(webSocketChatFlow())
+      getFromResource("web/index.html")
     }
-  }
+  } ~
+    path("frontend-launcher.js")(getFromResource("frontend-launcher.js")) ~
+    path("frontend-fastopt.js")(getFromResource("frontend-fastopt.js")) ~
+    path("chat") {
+      encodeResponseWith(NoCoding, Gzip) {
+        handleWebSocketMessages(webSocketChatFlow())
+      }
+    }
 
   def webSocketChatFlow(): Flow[Message, Message, Any] = {
     import shared.Protocol
 
     val outgoingConnActor = system.actorOf(Props[ConnectionActor]())
 
-    val outgoing = Source.actorRef[Protocol.Message](65535, OverflowStrategy.dropNew).mapMaterializedValue { a =>
-      outgoingConnActor ! Connected(a) // 外のスコープにあるoutgoingConnActorを介することで接続解除などに対応できるようにする
-      canvasActor ! Connected(outgoingConnActor)
-      ()
-    }
+    val outgoing = Source
+      .actorRef[Protocol.Message](65535, OverflowStrategy.dropNew)
+      .mapMaterializedValue { a =>
+        outgoingConnActor ! Connected(
+          a
+        ) // 外のスコープにあるoutgoingConnActorを介することで接続解除などに対応できるようにする
+        canvasActor ! Connected(outgoingConnActor)
+        ()
+      }
       .map {
         case msg: Protocol.PushBlock => {
           import Protocol._
@@ -61,11 +65,12 @@ class Webservice(implicit system: ActorSystem) extends Directives {
         }
       }
       .collect {
-        case (Right(pb), _) => pb
+        case (Right(pb), _)    => pb
         case (_, Right(clear)) => clear
       }
-      .to(Sink.actorRef(canvasActor, Disconnected(outgoingConnActor))) // CanvasActorに対するConnected/DisconnectedはすべてoutgoingConnActorが仲介している
-
+      .to(
+        Sink.actorRef(canvasActor, Disconnected(outgoingConnActor))
+      ) // CanvasActorに対するConnected/DisconnectedはすべてoutgoingConnActorが仲介している
 
     Flow.fromSinkAndSource(incoming, outgoing)
   }

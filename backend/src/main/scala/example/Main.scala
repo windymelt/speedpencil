@@ -22,10 +22,11 @@ object Main extends App {
   binding.onComplete {
     case Success(binding) =>
       val localAddress = binding.localAddress
-      println(s"Server is listening on ${localAddress.getHostName}:${localAddress.getPort}")
+      println(
+        s"Server is listening on ${localAddress.getHostName}:${localAddress.getPort}"
+      )
     case Failure(e) =>
       println(s"Binding failed with ${e.getMessage}")
       system.terminate()
   }
 }
-

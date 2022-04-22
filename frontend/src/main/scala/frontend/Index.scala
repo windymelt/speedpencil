@@ -15,7 +15,8 @@ object Frontend {
   def main(args: Array[String]): Unit = {
     println("hello, javascript and browser!")
 
-    canvas = dom.document.getElementById("canvas").asInstanceOf[HTMLCanvasElement]
+    canvas =
+      dom.document.getElementById("canvas").asInstanceOf[HTMLCanvasElement]
     ctx = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
     ctx.fillStyle = "rgb(255,255,255)"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -48,11 +49,19 @@ object Frontend {
     ctx.lineWidth = 5;
     canvas.addEventListener("mousedown", (ev: MouseEvent) => onMouseDown(ev))
     canvas.addEventListener("mouseup", (ev: MouseEvent) => onMouseUp(ev))
-    canvas.addEventListener("mousemove", (ev: MouseEvent) => onMouseMove(canvas, ev), false)
+    canvas.addEventListener(
+      "mousemove",
+      (ev: MouseEvent) => onMouseMove(canvas, ev),
+      false
+    )
 
     // clear button
-    val clear = dom.document.getElementById("clear").asInstanceOf[HTMLButtonElement]
-    clear.addEventListener("click", (ev: MouseEvent) => onClickClear(canvas, ev))
+    val clear =
+      dom.document.getElementById("clear").asInstanceOf[HTMLButtonElement]
+    clear.addEventListener(
+      "click",
+      (ev: MouseEvent) => onClickClear(canvas, ev)
+    )
   }
 
   var mouseX: Double = 0
@@ -79,10 +88,10 @@ object Frontend {
   }
 
   case class Ctx(
-    ctx: CanvasRenderingContext2D,
-    lastMouseX: Double,
-    lastMouseY: Double,
-    poisoningMap: collection.mutable.Map[(Int, Int), Boolean]
+      ctx: CanvasRenderingContext2D,
+      lastMouseX: Double,
+      lastMouseY: Double,
+      poisoningMap: collection.mutable.Map[(Int, Int), Boolean]
   )
 
   def xyToIndex(xory: Double): Int = {
@@ -91,41 +100,48 @@ object Frontend {
   def lerp(x0: Double, y0: Double, x1: Double, y1: Double, x: Double) = {
     y0 + (y1 - y0) * (x - x0) / (x1 - x0)
   }
-  def calcPoisoningMap(lx: Double, ly: Double, x: Double, y: Double): Seq[(Int, Int)] = {
+  def calcPoisoningMap(
+      lx: Double,
+      ly: Double,
+      x: Double,
+      y: Double
+  ): Seq[(Int, Int)] = {
     // 線形補完
     val ln = xyToIndex(lx)
     val lm = xyToIndex(ly)
     val n = xyToIndex(x)
     val m = xyToIndex(y)
 
-    val xs: Seq[Seq[(Int, Int)]] = for (x <- Math.min(ln, n) to Math.max(ln, n)) yield {
-      val y = lerp(ln, lm, n, m, x).toInt
-      Seq(
-        (x - 1, y - 1),
-        (x - 1, y),
-        (x - 1, y + 1),
-        (x, y - 1),
-        (x, y),
-        (x, y + 1),
-        (x + 1, y - 1),
-        (x + 1, y),
-        (x + 1, y + 1),
-      )
-    }
-    val ys: Seq[Seq[(Int, Int)]] = for (y <- Math.min(lm, m) to Math.max(lm, m)) yield {
-      val x = lerp(lm, ln, m, n, y).toInt
-      Seq(
-        (x - 1, y - 1),
-        (x - 1, y),
-        (x - 1, y + 1),
-        (x, y - 1),
-        (x, y),
-        (x, y + 1),
-        (x + 1, y - 1),
-        (x + 1, y),
-        (x + 1, y + 1),
-      )
-    }
+    val xs: Seq[Seq[(Int, Int)]] =
+      for (x <- Math.min(ln, n) to Math.max(ln, n)) yield {
+        val y = lerp(ln, lm, n, m, x).toInt
+        Seq(
+          (x - 1, y - 1),
+          (x - 1, y),
+          (x - 1, y + 1),
+          (x, y - 1),
+          (x, y),
+          (x, y + 1),
+          (x + 1, y - 1),
+          (x + 1, y),
+          (x + 1, y + 1)
+        )
+      }
+    val ys: Seq[Seq[(Int, Int)]] =
+      for (y <- Math.min(lm, m) to Math.max(lm, m)) yield {
+        val x = lerp(lm, ln, m, n, y).toInt
+        Seq(
+          (x - 1, y - 1),
+          (x - 1, y),
+          (x - 1, y + 1),
+          (x, y - 1),
+          (x, y),
+          (x, y + 1),
+          (x + 1, y - 1),
+          (x + 1, y),
+          (x + 1, y + 1)
+        )
+      }
     xs.flatten ++ ys.flatten
   }
 
@@ -144,14 +160,21 @@ object Frontend {
     drawCtx.ctx.lineTo(mouseX, mouseY)
 
     if (drawClockTimerEnabled) {
-      for (nm <- calcPoisoningMap(drawCtx.lastMouseX, drawCtx.lastMouseY, mouseX, mouseY)) {
+      for (
+        nm <- calcPoisoningMap(
+          drawCtx.lastMouseX,
+          drawCtx.lastMouseY,
+          mouseX,
+          mouseY
+        )
+      ) {
         drawCtx.poisoningMap.update(nm, true)
       }
       drawCtx = drawCtx.copy(
         lastMouseX = mouseX,
-        lastMouseY = mouseY,
+        lastMouseY = mouseY
       )
-      dom.window.setTimeout(() => drawClockTimerTick(), 10 /* millisec */)
+      dom.window.setTimeout(() => drawClockTimerTick(), 10 /* millisec */ )
     }
   }
   def pushTimerTick(): Unit = {
@@ -160,7 +183,7 @@ object Frontend {
         pushBlocks(drawCtx)
         drawCtx = drawCtx.copy(poisoningMap = collection.mutable.Map())
       }
-      dom.window.setTimeout(() => pushTimerTick(), 1000 /* millisec */)
+      dom.window.setTimeout(() => pushTimerTick(), 1000 /* millisec */ )
     }
   }
   def stopDrawClockTimer(): Unit = {
@@ -170,16 +193,24 @@ object Frontend {
     drawCtx = drawCtx.copy(poisoningMap = collection.mutable.Map())
   }
   val b64encoder = java.util.Base64.getEncoder()
-  var pushBuffer: Array[Byte] = Array.fill(4 * Protocol.blockSize * Protocol.blockSize)(255.toByte)
+  var pushBuffer: Array[Byte] =
+    Array.fill(4 * Protocol.blockSize * Protocol.blockSize)(255.toByte)
   def pushBlocks(ctx: Ctx): Unit = {
     for { nm <- ctx.poisoningMap.keys } yield {
       import io.circe.syntax._
       import Protocol._
       val (n, m) = nm
-      pushBuffer = ctx.ctx.getImageData(n * blockSizeD, m * blockSizeD, blockSizeD, blockSizeD).data.map(_.toByte).toArray
+      pushBuffer = ctx.ctx
+        .getImageData(n * blockSizeD, m * blockSizeD, blockSizeD, blockSizeD)
+        .data
+        .map(_.toByte)
+        .toArray
       // debug output
-      //ctx.ctx.rect(n* blockSizeD, m * blockSizeD, blockSizeD, blockSizeD)
-      val msg = Protocol.PushBlock(n, m, b64encoder.encodeToString(pushBuffer)).asJson.noSpaces
+      // ctx.ctx.rect(n* blockSizeD, m * blockSizeD, blockSizeD, blockSizeD)
+      val msg = Protocol
+        .PushBlock(n, m, b64encoder.encodeToString(pushBuffer))
+        .asJson
+        .noSpaces
       ws.send(msg.toString())
     }
   }
@@ -204,7 +235,15 @@ object Frontend {
         for (i <- 0 until blockBuffer.data.length) {
           blockBuffer.data(i) = data(i)
         }
-        ctx.putImageData(blockBuffer, pushBlock.n * blockSizeD, pushBlock.m * blockSizeD, 0, 0, blockSizeD, blockSizeD)
+        ctx.putImageData(
+          blockBuffer,
+          pushBlock.n * blockSizeD,
+          pushBlock.m * blockSizeD,
+          0,
+          0,
+          blockSizeD,
+          blockSizeD
+        )
       }
       case _ =>
     }

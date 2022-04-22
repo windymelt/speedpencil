@@ -41,19 +41,25 @@ class Webservice(implicit system: ActorSystem) extends Directives {
           import io.circe.syntax._
           TextMessage.Strict(msg.asJson.noSpaces.toString())
         }
+        case msg: Protocol.Clear => {
+          import Protocol._
+          import io.circe.syntax._
+          TextMessage.Strict(msg.asJson.noSpaces.toString())
+        }
       }
 
+    import io.circe.parser._
     val incoming = Flow[Message]
       .buffer(65535, OverflowStrategy.dropNew)
       .collect {
         case m @ TextMessage.Strict(msg) => {
-          import io.circe.parser._
           import Protocol._
-          decode[PushBlock](msg)
+          (decode[PushBlock](msg), decode[Clear](msg))
         }
       }
       .collect {
-        case Right(x) => x
+        case (Right(pb), _) => pb
+        case (_, Right(clear)) => clear
       }
       .to(Sink.actorRef(canvasActor, ())) // TODO: proxy as actor to notify death of connection
 

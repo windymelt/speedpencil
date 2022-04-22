@@ -10,7 +10,10 @@ object Protocol {
     val messageType: String
   }
   case class PushBlock(n: Int, m: Int, block: String) extends Message { val messageType = "pushBlock" }
+  case class Clear(clear: String = "clear") extends Message { val messageType = "clear" }
 
   implicit val PushBlockEncoder: Encoder[PushBlock] = deriveEncoder
   implicit val PushBlockDecoder: Decoder[PushBlock] = deriveDecoder
+  implicit val ClearEncoder: Encoder[Clear] = deriveEncoder
+  implicit val ClearDecoder: Decoder[Clear] = deriveDecoder
 }

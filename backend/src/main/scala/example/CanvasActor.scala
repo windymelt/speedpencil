@@ -27,6 +27,16 @@ class CanvasActor extends Actor {
         a ! Protocol.PushBlock(n, m, b64Buf)
       }
     }
+    case Protocol.Clear(_) => {
+      this.context.system.log.info("clearing canvas")
+      val emptyCell = genCell()
+      for (cell <- buffers) {
+        emptyCell copyToArray cell
+      }
+      subscribers foreach { a =>
+        a ! Protocol.Clear()
+      }
+    }
     case _ => // ignore
   }
   var multiBuffer = genCell()

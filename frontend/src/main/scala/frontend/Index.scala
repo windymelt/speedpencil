@@ -5,6 +5,7 @@ import org.scalajs.dom
 import shared.Protocol
 
 object Frontend {
+  var canvas: HTMLCanvasElement = null
   var ctx: CanvasRenderingContext2D = null
   var ws: WebSocket = null
 
@@ -14,7 +15,7 @@ object Frontend {
   def main(args: Array[String]): Unit = {
     println("hello, javascript and browser!")
 
-    val canvas = dom.document.getElementById("canvas").asInstanceOf[HTMLCanvasElement]
+    canvas = dom.document.getElementById("canvas").asInstanceOf[HTMLCanvasElement]
     ctx = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
     ctx.fillStyle = "rgb(255,255,255)"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -47,6 +48,10 @@ object Frontend {
     canvas.addEventListener("mousedown", (ev: MouseEvent) => onMouseDown(ev))
     canvas.addEventListener("mouseup", (ev: MouseEvent) => onMouseUp(ev))
     canvas.addEventListener("mousemove", (ev: MouseEvent) => onMouseMove(canvas, ev), false)
+
+    // clear button
+    val clear = dom.document.getElementById("clear").asInstanceOf[HTMLButtonElement]
+    clear.addEventListener("click", (ev: MouseEvent) => onClickClear(canvas, ev))
   }
 
   var mouseX: Double = 0
@@ -62,6 +67,14 @@ object Frontend {
     val canvasRect = canvas.getBoundingClientRect()
     mouseX = ev.clientX - canvasRect.left
     mouseY = ev.clientY - canvasRect.top
+  }
+  def onClickClear(canvas: HTMLCanvasElement, ev: MouseEvent): Unit = {
+    doClear(canvas)
+    sendClear()
+  }
+  def doClear(canvas: HTMLCanvasElement): Unit = {
+    ctx.fillStyle = "rgb(255,255,255)"
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
   }
 
   case class Ctx(
@@ -168,6 +181,13 @@ object Frontend {
     }
   }
 
+  def sendClear(): Unit = {
+    import io.circe.syntax._
+    import Protocol._
+    val msg = Protocol.Clear().asJson.noSpaces
+    ws.send(msg.toString())
+  }
+
   var blockBuffer: ImageData = null
 
   val b64decoder = java.util.Base64.getDecoder()
@@ -184,6 +204,12 @@ object Frontend {
         ctx.putImageData(blockBuffer, pushBlock.n * blockSizeD, pushBlock.m * blockSizeD, 0, 0, blockSizeD, blockSizeD)
       }
       case _ =>
+    }
+
+    decode[Clear](msg.data.asInstanceOf[String]) match {
+      case Right(clear) => {
+        doClear(canvas)
+      }
     }
   }
 }

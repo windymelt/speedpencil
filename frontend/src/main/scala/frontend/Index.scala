@@ -177,6 +177,8 @@ object Frontend {
       import Protocol._
       val (n, m) = nm
       pushBuffer = ctx.ctx.getImageData(n * blockSizeD, m * blockSizeD, blockSizeD, blockSizeD).data.map(_.toByte).toArray
+      // debug output
+      //ctx.ctx.rect(n* blockSizeD, m * blockSizeD, blockSizeD, blockSizeD)
       val msg = Protocol.PushBlock(n, m, b64encoder.encodeToString(pushBuffer)).asJson.noSpaces
       ws.send(msg.toString())
     }

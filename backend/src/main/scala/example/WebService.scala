@@ -31,8 +31,11 @@ class Webservice(implicit system: ActorSystem) extends Directives {
   def webSocketChatFlow(): Flow[Message, Message, Any] = {
     import shared.Protocol
 
+    val outgoingConnActor = system.actorOf(Props[ConnectionActor]())
+
     val outgoing = Source.actorRef[Protocol.Message](65535, OverflowStrategy.dropNew).mapMaterializedValue { a =>
-      canvasActor ! Connected(a)
+      outgoingConnActor ! Connected(a) // 外のスコープにあるoutgoingConnActorを介することで接続解除などに対応できるようにする
+      canvasActor ! Connected(outgoingConnActor)
       ()
     }
       .map {
@@ -61,7 +64,7 @@ class Webservice(implicit system: ActorSystem) extends Directives {
         case (Right(pb), _) => pb
         case (_, Right(clear)) => clear
       }
-      .to(Sink.actorRef(canvasActor, ())) // TODO: proxy as actor to notify death of connection
+      .to(Sink.actorRef(canvasActor, Disconnected(outgoingConnActor))) // CanvasActorに対するConnected/DisconnectedはすべてoutgoingConnActorが仲介している
 
 
     Flow.fromSinkAndSource(incoming, outgoing)

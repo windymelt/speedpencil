@@ -15,8 +15,14 @@ class CanvasActor extends Actor {
   val b64decoder = java.util.Base64.getDecoder()
   val b64encoder = java.util.Base64.getEncoder()
   def receive: PartialFunction[Any,Unit] = {
-    case Connected(a) => subscribers ++= Seq(a)
-    // case Disconnected(a) => subscribers = subscribers.filterNot(_ == a)
+    case Connected(a) => {
+      subscribers ++= Seq(a)
+      this.context.system.log.info(s"Connected ${a.path}")
+    }
+    case Disconnected(a) => {
+      subscribers = subscribers.filterNot(_ == a)
+      this.context.system.log.info(s"Disconnected ${a.path}")
+    }
     case Protocol.PushBlock(n, m, block) if n >= 0 && m >= 0 && n < bufferWidthCount && m < bufferHeightCount => {
       val idx = getCellIdx(n, m)
       (buffers(idx) multiply b64decoder.decode(block).map(java.lang.Byte.toUnsignedInt)) copyToArray buffers(idx)

@@ -42,11 +42,14 @@ object Frontend {
     // }
     // ctx.strokeStyle = "rgb(0,0,0)"
 
-    ws = Ws.newWebSocket()
-    ws.onmessage = getBlock(ctx)
-    ws.onclose = onConnectionClosed()
+    initializeWs()
+    registerEvents()
 
     ctx.lineWidth = 5;
+
+  }
+
+  def registerEvents(): Unit = {
     canvas.addEventListener("mousedown", (ev: MouseEvent) => onMouseDown(ev))
     canvas.addEventListener("mouseup", (ev: MouseEvent) => onMouseUp(ev))
     canvas.addEventListener(
@@ -62,6 +65,30 @@ object Frontend {
       "click",
       (ev: MouseEvent) => onClickClear(canvas, ev)
     )
+
+    // color button
+    val teal =
+      dom.document.getElementById("colorTeal").asInstanceOf[HTMLButtonElement]
+    teal.addEventListener(
+      "click",
+      (ev: MouseEvent) => { ctx.strokeStyle = "rgb(0, 128, 128)" }
+    )
+
+    val orange = dom.document
+      .getElementById(
+        "colorOrange"
+      )
+      .asInstanceOf[HTMLButtonElement]
+    orange.addEventListener(
+      "click",
+      (ev: MouseEvent) => { ctx.strokeStyle = "rgb(255, 128, 0)" }
+    )
+  }
+
+  def initializeWs(): Unit = {
+    ws = Ws.newWebSocket()
+    ws.onmessage = getBlock(ctx)
+    ws.onclose = onConnectionClosed()
   }
 
   var mouseX: Double = 0
@@ -256,6 +283,8 @@ object Frontend {
   }
 
   def onConnectionClosed() = (msg: CloseEvent) => {
-    dom.window.alert("Connection closed unexpectedly. Please Reload.")
+    // dom.window.alert("Connection closed unexpectedly. Please Reload.")
+    initializeWs()
+    println("Connection reconnecting")
   }
 }

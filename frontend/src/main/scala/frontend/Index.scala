@@ -105,6 +105,12 @@ object Frontend {
     ws = Ws.newWebSocket()
     ws.onmessage = getBlock(ctx)
     ws.onclose = onConnectionClosed()
+    ws.onopen = sync()
+  }
+
+  def sync() = (_: Event) => {
+    import io.circe.syntax._
+    ws.send(Protocol.Sync().asJson.toString)
   }
 
   var mouseX: Double = 0
@@ -295,6 +301,7 @@ object Frontend {
       case Right(clear) => {
         doClear(canvas)
       }
+      case _ =>
     }
   }
 

@@ -61,12 +61,13 @@ class Webservice(implicit system: ActorSystem) extends Directives {
       .collect {
         case m @ TextMessage.Strict(msg) => {
           import Protocol._
-          (decode[PushBlock](msg), decode[Clear](msg))
+          (decode[PushBlock](msg), decode[Clear](msg), decode[Sync](msg))
         }
       }
       .collect {
-        case (Right(pb), _)    => pb
-        case (_, Right(clear)) => clear
+        case (Right(pb), _, _)    => pb
+        case (_, Right(clear), _) => clear
+        case (_, _, Right(sync))  => SyncToActor(outgoingConnActor)
       }
       .to(
         Sink.actorRef(canvasActor, Disconnected(outgoingConnActor))

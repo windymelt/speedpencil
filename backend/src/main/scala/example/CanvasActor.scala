@@ -2,7 +2,7 @@ package example
 
 import akka.actor.Actor
 import shared.Protocol
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Props}
 
 class CanvasActor extends Actor {
   val cellSize = shared.Protocol.blockSize * shared.Protocol.blockSize * 4
@@ -23,12 +23,26 @@ class CanvasActor extends Actor {
       subscribers = subscribers.filterNot(_ == a)
       this.context.system.log.info(s"Disconnected ${a.path}")
     }
+    case SyncToActor(a) => {
+      val syncer = this.context.system.actorOf(Props[SyncerActor]())
+      syncer ! a
+      for (idx <- 0 until buffers.size) {
+        val n = idx / bufferHeightCount
+        val m = idx % bufferHeightCount
+        if (buffers(idx).exists(_ != 255)) {
+          val b64Buf =
+            b64encoder.encodeToString(buffers(idx).map(_.toByte))
+          syncer ! Protocol.PushBlock(n, m, b64Buf)
+        }
+      }
+      syncer ! SyncerGoAhead
+    }
     case Protocol.PushBlock(n, m, block)
         if n >= 0 && m >= 0 && n < bufferWidthCount && m < bufferHeightCount => {
       val idx = getCellIdx(n, m)
-      (buffers(idx) multiply b64decoder
-        .decode(block)
-        .map(java.lang.Byte.toUnsignedInt)) copyToArray buffers(idx)
+      val buf = b64decoder.decode(block)
+      (buffers(idx) multiply
+        buf.map(java.lang.Byte.toUnsignedInt)) copyToArray buffers(idx)
 
       val byteBuffer = buffers(idx).map(_.toByte)
       val b64Buf = b64encoder.encodeToString(byteBuffer)
@@ -65,3 +79,4 @@ class CanvasActor extends Actor {
 
 case class Connected(actor: ActorRef)
 case class Disconnected(actor: ActorRef)
+case class SyncToActor(actor: ActorRef)

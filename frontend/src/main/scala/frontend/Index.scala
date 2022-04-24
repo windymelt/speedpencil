@@ -9,7 +9,7 @@ object Frontend {
   var ctx: CanvasRenderingContext2D = null
   var ws: WebSocket = null
 
-  val blockSize = shared.Protocol.blockSize
+  import shared.Protocol.blockSize
   val blockSizeD: Double = shared.Protocol.blockSize.toDouble
 
   def main(args: Array[String]): Unit = {
@@ -51,11 +51,32 @@ object Frontend {
   }
 
   def registerEvents(): Unit = {
-    canvas.addEventListener("mousedown", (ev: MouseEvent) => onMouseDown(ev))
-    canvas.addEventListener("mouseup", (ev: MouseEvent) => onMouseUp(ev))
+    canvas.addEventListener(
+      "mousedown",
+      (ev: MouseEvent) => onMouseDown(ev)
+    )
+    canvas.addEventListener(
+      "touchstart",
+      (ev: TouchEvent) => onTouchStart(canvas, ev)
+    )
+
+    canvas.addEventListener(
+      "mouseup",
+      (ev: MouseEvent) => onMouseUp(ev)
+    )
+    canvas.addEventListener(
+      "touchend",
+      (ev: MouseEvent) => onMouseUp(ev)
+    )
+
     canvas.addEventListener(
       "mousemove",
       (ev: MouseEvent) => onMouseMove(canvas, ev),
+      false
+    )
+    canvas.addEventListener(
+      "touchmove",
+      (ev: TouchEvent) => onTouchMove(canvas, ev),
       false
     )
 
@@ -118,15 +139,30 @@ object Frontend {
   var mouseY: Double = 0
 
   def onMouseDown(ev: MouseEvent): Unit = {
+    if (ev.button != 0) return
+    startDrawClockTimer()
+  }
+  def onTouchStart(canvas: HTMLCanvasElement, ev: TouchEvent): Unit = {
+    ev.preventDefault()
+    val canvasRect = canvas.getBoundingClientRect()
+    mouseX = ev.changedTouches(0).clientX - canvasRect.left
+    mouseY = ev.changedTouches(0).clientY - canvasRect.top
     startDrawClockTimer()
   }
   def onMouseUp(ev: MouseEvent): Unit = {
     stopDrawClockTimer()
   }
   def onMouseMove(canvas: HTMLCanvasElement, ev: MouseEvent): Unit = {
+    ev.preventDefault() // suppress scrolling
     val canvasRect = canvas.getBoundingClientRect()
     mouseX = ev.clientX - canvasRect.left
     mouseY = ev.clientY - canvasRect.top
+  }
+  def onTouchMove(canvas: HTMLCanvasElement, ev: TouchEvent): Unit = {
+    ev.preventDefault() // suppress scrolling
+    val canvasRect = canvas.getBoundingClientRect()
+    mouseX = ev.changedTouches(0).clientX - canvasRect.left
+    mouseY = ev.changedTouches(0).clientY - canvasRect.top
   }
   def onClickClear(canvas: HTMLCanvasElement, ev: MouseEvent): Unit = {
     doClear(canvas)
@@ -150,6 +186,7 @@ object Frontend {
     drawClockTimerEnabled = true
     ctx.beginPath()
     drawCtx = Ctx(ctx, mouseX, mouseY, collection.mutable.Map())
+    drawCtx.ctx.stroke()
     drawClockTimerTick()
     pushTimerTick()
   }

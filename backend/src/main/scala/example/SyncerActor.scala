@@ -1,8 +1,7 @@
 package example
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
 import shared.Protocol
-import akka.actor.ActorRef
 
 class SyncerActor() extends Actor {
   var sendTo: ActorRef = null

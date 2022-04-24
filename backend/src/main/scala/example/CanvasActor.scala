@@ -1,8 +1,7 @@
 package example
 
-import akka.actor.Actor
 import shared.Protocol
-import akka.actor.{ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props}
 
 class CanvasActor extends Actor {
   val cellSize = shared.Protocol.blockSize * shared.Protocol.blockSize * 4

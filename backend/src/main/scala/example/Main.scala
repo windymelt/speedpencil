@@ -3,8 +3,6 @@ package example
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import scala.util.{Success, Failure}
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 object Main extends App {
   implicit val system = ActorSystem()

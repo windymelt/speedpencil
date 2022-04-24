@@ -1,17 +1,13 @@
 package example
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.server.{Directives, Route}
-import akka.stream.scaladsl.{Source, Flow, Sink}
+import akka.actor.{ActorSystem, Props}
+import akka.http.scaladsl.coding.{Gzip, NoCoding}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.actor.Props
+import akka.http.scaladsl.server.{Directives, Route}
 import akka.stream.OverflowStrategy
-import akka.actor.PoisonPill
-import akka.http.scaladsl.coding.NoCoding
-import akka.http.scaladsl.coding.Gzip
+import akka.stream.scaladsl.{Flow, Sink, Source}
 
 class Webservice(implicit system: ActorSystem) extends Directives {
-  import system.dispatcher
 
   val canvasActor = system.actorOf(Props[CanvasActor]())
 

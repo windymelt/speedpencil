@@ -8,8 +8,6 @@ object Main extends App {
   implicit val system = ActorSystem()
   import system.dispatcher
 
-  println("hello, world")
-
   val config = system.settings.config
   val interface = config.getString("app.interface")
   val port = config.getInt("app.port")
@@ -20,11 +18,11 @@ object Main extends App {
   binding.onComplete {
     case Success(binding) =>
       val localAddress = binding.localAddress
-      println(
+      system.log.info(
         s"Server is listening on ${localAddress.getHostName}:${localAddress.getPort}"
       )
     case Failure(e) =>
-      println(s"Binding failed with ${e.getMessage}")
+      system.log.error(s"Binding failed with ${e.getMessage}")
       system.terminate()
   }
 }

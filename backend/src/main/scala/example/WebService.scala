@@ -1,7 +1,7 @@
 package example
 
 import akka.actor.{ActorSystem, Props}
-import akka.http.scaladsl.coding.{Gzip, NoCoding}
+import akka.http.scaladsl.coding.Coders.{Gzip, NoCoding}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.{Directives, Route}
 import akka.stream.OverflowStrategy
@@ -30,7 +30,7 @@ class Webservice(implicit system: ActorSystem) extends Directives {
     val outgoingConnActor = system.actorOf(Props[ConnectionActor]())
 
     val outgoing = Source
-      .actorRef[Protocol.Message](65535, OverflowStrategy.dropNew)
+      .actorRef[Protocol.Message](65535, OverflowStrategy.dropTail)
       .mapMaterializedValue { a =>
         outgoingConnActor ! Connected(
           a
@@ -53,7 +53,7 @@ class Webservice(implicit system: ActorSystem) extends Directives {
 
     import io.circe.parser._
     val incoming = Flow[Message]
-      .buffer(65535, OverflowStrategy.dropNew)
+      .buffer(65535, OverflowStrategy.dropTail)
       .collect {
         case m @ TextMessage.Strict(msg) => {
           import Protocol._
@@ -66,7 +66,11 @@ class Webservice(implicit system: ActorSystem) extends Directives {
         case (_, _, Right(sync))  => SyncToActor(outgoingConnActor)
       }
       .to(
-        Sink.actorRef(canvasActor, Disconnected(outgoingConnActor))
+        Sink.actorRef(
+          canvasActor,
+          Disconnected(outgoingConnActor),
+          (_) => Disconnected(outgoingConnActor) // 接続失敗時には接続解除扱いとする
+        )
       ) // CanvasActorに対するConnected/DisconnectedはすべてoutgoingConnActorが仲介している
 
     Flow.fromSinkAndSource(incoming, outgoing)
